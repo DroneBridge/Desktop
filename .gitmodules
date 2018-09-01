@@ -1,0 +1,3 @@
+[submodule "dronebridge_base"]
+	path = dronebridge_base
+	url = https://github.com/seeul8er/DroneBridge.git
