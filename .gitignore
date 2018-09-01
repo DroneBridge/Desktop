@@ -11,3 +11,9 @@ CTestTestfile.cmake
 monitor/\.idea/
 
 *.cbp
+
+\.idea/
+
+cmake-build-debug/
+
+cmake-build-release/

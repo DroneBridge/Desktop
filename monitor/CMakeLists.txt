@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.10)
 project(monitor C)
 
 set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_FLAGS "-O3") ## Optimize
+
+add_subdirectory(../dronebridge_base/common db_common)
 
 FIND_PACKAGE(PkgConfig REQUIRED)
 PKG_CHECK_MODULES(GTK3 REQUIRED gtk+-3.0)
@@ -15,8 +18,8 @@ LINK_DIRECTORIES(${GTK3_LIBRARY_DIRS})
 ADD_DEFINITIONS(${GTK3_CFLAGS_OTHER})
 ADD_DEFINITIONS(${CMAKE_CXX_FLAGS})
 
-# Add an executable compiled from hello.c
+add_executable(monitor main.c)
 
-add_executable(db_monitor main.c)
-
-TARGET_LINK_LIBRARIES(db_monitor ${GTK3_LIBRARIES})
+TARGET_LINK_LIBRARIES(monitor ${GTK3_LIBRARIES})
+target_link_libraries(monitor db_common)
+file(COPY glade DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
