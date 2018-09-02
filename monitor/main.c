@@ -35,9 +35,12 @@ wifibroadcast_rx_status_t_sysair *wbc_sys_air_status_shm;
 wifibroadcast_rx_status_t_rc *wbc_rc_status_shm;
 wifibroadcast_rx_status_t *wbc_sys_gnd_status_shm;
 
-GtkLabel *l_lostpackets, *l_badblocks, *l_video_bestrssi;
+GtkLabel *l_lostpackets, *l_badblocks, *l_video_bestrssi, *l_uav_cpu_temp, *l_uav_cpu_load, *l_uav_voltage, *l_rc_rssi,
+        *l_rc_packets;
 GtkLabel *l_if_adapters[4];
 GtkLabel *l_rssi_adapters[4];
+GtkLabel *l_rc_ch[NUM_CHANNELS];
+GtkProgressBar *pb_rc_ch[NUM_CHANNELS];
 
 /**
  * Iterate over all apaters registered by the video module to get the best RSSI
@@ -52,32 +55,31 @@ int find_best_video_rssi(){
     return best_dbm;
 }
 
-void update_ui_video_rssi() {
-    gtk_label_set_text(l_lostpackets, g_strdup_printf("%i", wbc_sys_gnd_status_shm->lost_packet_cnt));
-    gtk_label_set_text(l_badblocks, g_strdup_printf("%i", wbc_sys_gnd_status_shm->damaged_block_cnt));
-    gtk_label_set_text(l_video_bestrssi, g_strdup_printf("%i dBm", find_best_video_rssi()));
-    for (int  i = 0;  i < wbc_sys_gnd_status_shm->wifi_adapter_cnt; ++ i) {
-        gtk_label_set_text(l_rssi_adapters[i], g_strdup_printf("%i dBm", wbc_sys_gnd_status_shm->adapter[i].current_signal_dbm));
-    }
-}
-
-void update_ui_sys_air() {
-
-}
-
-void update_ui_rc() {
-
-}
-
 /**
  * Reads the data from shared memory and updates the UI labels
  * @param data unused
  * @return
  */
 gint update_ui_callback(gpointer data){
-    update_ui_video_rssi();
-    update_ui_sys_air();
-    update_ui_rc();
+    gtk_label_set_text(l_lostpackets, g_strdup_printf("%i", wbc_sys_gnd_status_shm->lost_packet_cnt));
+    gtk_label_set_text(l_badblocks, g_strdup_printf("%i", wbc_sys_gnd_status_shm->damaged_block_cnt));
+    gtk_label_set_text(l_video_bestrssi, g_strdup_printf("%i dBm", find_best_video_rssi()));
+    for (int  i = 0;  i < wbc_sys_gnd_status_shm->wifi_adapter_cnt; ++ i) {
+        gtk_label_set_text(l_rssi_adapters[i], g_strdup_printf("%i dBm", wbc_sys_gnd_status_shm->adapter[i].current_signal_dbm));
+    }
+    // TODO add interface name to UI when switched to
+    gtk_label_set_text(l_uav_cpu_temp, g_strdup_printf("%i °C", wbc_sys_air_status_shm->temp));
+    gtk_label_set_text(l_uav_cpu_load, g_strdup_printf("%i %%", wbc_sys_air_status_shm->cpuload));
+    if (wbc_sys_air_status_shm->undervolt == 1)
+        gtk_label_set_text(l_uav_voltage, "undervoltage");
+    else
+        gtk_label_set_text(l_uav_voltage, "good");
+    gtk_label_set_text(l_rc_rssi, g_strdup_printf("%i dBm", wbc_rc_status_shm->adapter[0].current_signal_dbm));
+    gtk_label_set_text(l_rc_packets, g_strdup_printf("%i", wbc_rc_status_shm->lost_packet_cnt));
+    for (int  i = 0;  i < NUM_CHANNELS; ++i) {
+        gtk_label_set_text(l_rc_ch[i], g_strdup_printf("%i", db_rc_values_shm->ch[i]));
+        gtk_progress_bar_set_fraction(pb_rc_ch[i], (gdouble)(db_rc_values_shm->ch[i]-1000)/1000);
+    }
 }
 
 /**
@@ -130,6 +132,43 @@ void get_all_ui_elements(GtkBuilder *pBuilder) {
     l_rssi_adapters[1] = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rssi_adapter_2"));
     l_rssi_adapters[2] = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rssi_adapter_3"));
     l_rssi_adapters[3] = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rssi_adapter_4"));
+
+    l_uav_cpu_temp = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_uav_cpu_temp"));
+    l_uav_cpu_load = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_uav_cpu_load"));
+    l_uav_voltage = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_uav_voltage"));
+
+    l_rc_rssi = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rc_rssi"));
+    l_rc_packets = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rc_packets"));
+
+    l_rc_ch[0] = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rc_ch1"));
+    l_rc_ch[1] = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rc_ch2"));
+    l_rc_ch[2] = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rc_ch3"));
+    l_rc_ch[3] = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rc_ch4"));
+    l_rc_ch[4] = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rc_ch5"));
+    l_rc_ch[5] = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rc_ch6"));
+    l_rc_ch[6] = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rc_ch7"));
+    l_rc_ch[7] = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rc_ch8"));
+    l_rc_ch[8] = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rc_ch9"));
+    l_rc_ch[9] = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rc_ch10"));
+    l_rc_ch[10] = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rc_ch11"));
+    l_rc_ch[11] = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rc_ch12"));
+    l_rc_ch[12] = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rc_ch13"));
+    l_rc_ch[13] = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_rc_ch14"));
+
+    pb_rc_ch[0] = GTK_PROGRESS_BAR(gtk_builder_get_object(pBuilder, "pb_ch1"));
+    pb_rc_ch[1] = GTK_PROGRESS_BAR(gtk_builder_get_object(pBuilder, "pb_ch2"));
+    pb_rc_ch[2] = GTK_PROGRESS_BAR(gtk_builder_get_object(pBuilder, "pb_ch3"));
+    pb_rc_ch[3] = GTK_PROGRESS_BAR(gtk_builder_get_object(pBuilder, "pb_ch4"));
+    pb_rc_ch[4] = GTK_PROGRESS_BAR(gtk_builder_get_object(pBuilder, "pb_ch5"));
+    pb_rc_ch[5] = GTK_PROGRESS_BAR(gtk_builder_get_object(pBuilder, "pb_ch6"));
+    pb_rc_ch[6] = GTK_PROGRESS_BAR(gtk_builder_get_object(pBuilder, "pb_ch7"));
+    pb_rc_ch[7] = GTK_PROGRESS_BAR(gtk_builder_get_object(pBuilder, "pb_ch8"));
+    pb_rc_ch[8] = GTK_PROGRESS_BAR(gtk_builder_get_object(pBuilder, "pb_ch9"));
+    pb_rc_ch[9] = GTK_PROGRESS_BAR(gtk_builder_get_object(pBuilder, "pb_ch10"));
+    pb_rc_ch[10] = GTK_PROGRESS_BAR(gtk_builder_get_object(pBuilder, "pb_ch11"));
+    pb_rc_ch[11] = GTK_PROGRESS_BAR(gtk_builder_get_object(pBuilder, "pb_ch12"));
+    pb_rc_ch[12] = GTK_PROGRESS_BAR(gtk_builder_get_object(pBuilder, "pb_ch13"));
+    pb_rc_ch[13] = GTK_PROGRESS_BAR(gtk_builder_get_object(pBuilder, "pb_ch14"));
 }
 
 /**
