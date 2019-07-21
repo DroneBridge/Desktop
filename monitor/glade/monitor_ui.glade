@@ -12,11 +12,13 @@
       <object class="GtkBox">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
+        <property name="valign">start</property>
         <property name="margin_left">5</property>
         <property name="margin_right">5</property>
         <property name="margin_top">5</property>
         <property name="margin_bottom">5</property>
         <property name="orientation">vertical</property>
+        <property name="baseline_position">top</property>
         <child>
           <object class="GtkGrid">
             <property name="visible">True</property>
@@ -139,7 +141,7 @@
                       <object class="GtkLabel">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Lost packets:</property>
+                        <property name="label" translatable="yes">Received packets:</property>
                         <attributes>
                           <attribute name="weight" value="bold"/>
                         </attributes>
@@ -562,7 +564,7 @@
                       <object class="GtkLabel">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">~lost packets/second:</property>
+                        <property name="label" translatable="yes">~Received packets/second:</property>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -571,7 +573,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="l_rc_packets">
+                      <object class="GtkLabel" id="l_recv_packets">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">-</property>

@@ -1,8 +1,12 @@
-#!/bin/sh
-INTERFACE="wlx18a6f716a511"
-FREQU=2472
-iw dev $INTERFACE set bitrates legacy-2.4 54
-ifconfig $INTERFACE down
-iw dev $INTERFACE set monitor none
-ifconfig $INTERFACE up
-iw dev $INTERFACE set freq $FREQU
+#!/bin/bash
+interface="wlx18a6f716a511"
+frequ=2472
+
+ip link set $interface down
+iw dev $interface set type managed
+ip link set $interface up
+iw dev $interface set bitrates legacy-2.4 54
+ip link set $interface down
+iw dev $interface set type monitor
+ip link set $interface up
+iw dev $interface set freq $frequ
