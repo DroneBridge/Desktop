@@ -20,6 +20,10 @@
 #include <stdio.h>
 #include <gtk/gtk.h>
 #include <stdbool.h>
+#include <sys/mman.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "../dronebridge_base/common/ccolors.h"
 #include "../dronebridge_base/common/db_protocol.h"
 #include "../dronebridge_base/common/shared_memory.h"
@@ -43,6 +47,7 @@ GtkLabel *l_rssi_adapters[4];
 GtkLabel *l_rc_ch[NUM_CHANNELS];
 GtkProgressBar *pb_rc_ch[NUM_CHANNELS];
 
+
 /**
  * Iterate over all apaters registered by the video module to get the best RSSI
  * @return
@@ -50,7 +55,8 @@ GtkProgressBar *pb_rc_ch[NUM_CHANNELS];
 int find_best_video_rssi(){
     int best_dbm = -128;
     for(int cardcounter=0; cardcounter < db_gnd_status->wifi_adapter_cnt; ++cardcounter) {
-        if (best_dbm < db_gnd_status->adapter[cardcounter].current_signal_dbm)
+        if (best_dbm < db_gnd_status->adapter[cardcounter].current_signal_dbm
+        && db_gnd_status->adapter[cardcounter].current_signal_dbm != 0)
             best_dbm = db_gnd_status->adapter[cardcounter].current_signal_dbm;
     }
     return best_dbm;
@@ -62,11 +68,13 @@ int find_best_video_rssi(){
  * @return
  */
 gint update_ui_callback(gpointer data){
-    gtk_label_set_text(l_lostpackets, g_strdup_printf("%i", db_gnd_status->lost_packet_cnt));
+    gtk_label_set_text(l_lostpackets, g_strdup_printf("%i", db_gnd_status->received_packet_cnt));
     gtk_label_set_text(l_badblocks, g_strdup_printf("%i", db_gnd_status->damaged_block_cnt));
     gtk_label_set_text(l_video_bestrssi, g_strdup_printf("%i dBm", find_best_video_rssi()));
-    for (int  i = 0;  i < db_gnd_status->wifi_adapter_cnt; ++ i) {
-        gtk_label_set_text(l_rssi_adapters[i], g_strdup_printf("%i dBm", db_gnd_status->adapter[i].current_signal_dbm));
+    for (int i = 0; i < db_gnd_status->wifi_adapter_cnt; i++) {
+        gtk_label_set_text(l_if_adapters[i], g_strdup_printf("%s:", db_gnd_status->adapter[i].name));
+        gtk_label_set_text(l_rssi_adapters[i], g_strdup_printf("%i dBm (%i) @ %iMbps", db_gnd_status->adapter[i].current_signal_dbm,
+                db_gnd_status->adapter[i].received_packet_cnt, db_gnd_status->adapter[i].rate * 500/1000));
     }
     // TODO add interface name to UI when switched to
     gtk_label_set_text(l_uav_cpu_temp, g_strdup_printf("%i °C", db_uav_status->temp));
