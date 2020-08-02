@@ -70,7 +70,7 @@ gint update_ui_callback(gpointer data) {
     gtk_label_set_text(l_datarate, g_strdup_printf("%.02f Mbit/s", db_gnd_status->kbitrate/1000.0f));
     if (db_gnd_status->received_packet_cnt > 0)
         gtk_label_set_text(l_lostpackets, g_strdup_printf("%i (%.2f%%)", db_gnd_status->lost_packet_cnt,
-                                                          (double) db_gnd_status->lost_packet_cnt /
+                                                          100 * (double) db_gnd_status->lost_packet_cnt /
                                                           (db_gnd_status->lost_packet_cnt +
                                                            db_gnd_status->received_packet_cnt)));
     gtk_label_set_text(l_recvpackets, g_strdup_printf("%i", db_gnd_status->received_packet_cnt));
