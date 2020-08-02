@@ -24,7 +24,6 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include "../dronebridge_base/common/ccolors.h"
 #include "../dronebridge_base/common/db_protocol.h"
 #include "../dronebridge_base/common/shared_memory.h"
 
@@ -41,7 +40,7 @@ guint32 ui_update_intervall = 100; // [milliseconds]
 
 
 GtkLabel *l_lostpackets, *l_badblocks, *l_video_bestrssi, *l_uav_cpu_temp, *l_uav_cpu_load, *l_uav_voltage, *l_rc_rssi,
-        *l_rc_packets;
+        *l_rc_packets, *l_recvpackets, *l_datarate;
 GtkLabel *l_if_adapters[4];
 GtkLabel *l_rssi_adapters[4];
 GtkLabel *l_rc_ch[NUM_CHANNELS];
@@ -52,11 +51,11 @@ GtkProgressBar *pb_rc_ch[NUM_CHANNELS];
  * Iterate over all apaters registered by the video module to get the best RSSI
  * @return
  */
-int find_best_video_rssi(){
+int find_best_video_rssi() {
     int best_dbm = -128;
-    for(int cardcounter=0; cardcounter < db_gnd_status->wifi_adapter_cnt; ++cardcounter) {
+    for (int cardcounter = 0; cardcounter < db_gnd_status->wifi_adapter_cnt; ++cardcounter) {
         if (best_dbm < db_gnd_status->adapter[cardcounter].current_signal_dbm
-        && db_gnd_status->adapter[cardcounter].current_signal_dbm != 0)
+            && db_gnd_status->adapter[cardcounter].current_signal_dbm != 0)
             best_dbm = db_gnd_status->adapter[cardcounter].current_signal_dbm;
     }
     return best_dbm;
@@ -67,14 +66,22 @@ int find_best_video_rssi(){
  * @param data unused
  * @return
  */
-gint update_ui_callback(gpointer data){
-    gtk_label_set_text(l_lostpackets, g_strdup_printf("%i", db_gnd_status->received_packet_cnt));
+gint update_ui_callback(gpointer data) {
+    gtk_label_set_text(l_datarate, g_strdup_printf("%.02f Mbit/s", db_gnd_status->kbitrate/1000.0f));
+    if (db_gnd_status->received_packet_cnt > 0)
+        gtk_label_set_text(l_lostpackets, g_strdup_printf("%i (%.2f%%)", db_gnd_status->lost_packet_cnt,
+                                                          (double) db_gnd_status->lost_packet_cnt /
+                                                          (db_gnd_status->lost_packet_cnt +
+                                                           db_gnd_status->received_packet_cnt)));
+    gtk_label_set_text(l_recvpackets, g_strdup_printf("%i", db_gnd_status->received_packet_cnt));
     gtk_label_set_text(l_badblocks, g_strdup_printf("%i", db_gnd_status->damaged_block_cnt));
     gtk_label_set_text(l_video_bestrssi, g_strdup_printf("%i dBm", find_best_video_rssi()));
     for (int i = 0; i < db_gnd_status->wifi_adapter_cnt; i++) {
         gtk_label_set_text(l_if_adapters[i], g_strdup_printf("%s:", db_gnd_status->adapter[i].name));
-        gtk_label_set_text(l_rssi_adapters[i], g_strdup_printf("%i dBm (%i) @ %iMbps", db_gnd_status->adapter[i].current_signal_dbm,
-                db_gnd_status->adapter[i].received_packet_cnt, db_gnd_status->adapter[i].rate * 500/1000));
+        gtk_label_set_text(l_rssi_adapters[i],
+                           g_strdup_printf("%i dBm (%i) @ %iMbps", db_gnd_status->adapter[i].current_signal_dbm,
+                                           db_gnd_status->adapter[i].received_packet_cnt,
+                                           db_gnd_status->adapter[i].rate * 500 / 1000));
     }
     // TODO add interface name to UI when switched to
     gtk_label_set_text(l_uav_cpu_temp, g_strdup_printf("%i °C", db_uav_status->temp));
@@ -96,30 +103,30 @@ gint update_ui_callback(gpointer data){
  * Starts a timer that will trigger an event with a specified interval.
  * Used to update the UI regularly
  */
-void start_timer(){
+void start_timer() {
     if (!gtk_timer_running) {
         gtk_timeout = g_timeout_add(ui_update_intervall, update_ui_callback, NULL);
         gtk_timer_running = true;
     }
 }
 
-void stop_timer()
-{
+void stop_timer() {
     if (gtk_timer_running) {
         g_source_remove(gtk_timeout);
         gtk_timer_running = false;
     }
 }
 
-void on_main_window_destroy()
-{
+void on_main_window_destroy() {
     stop_timer();
     gtk_main_quit();
 }
 
 
 void get_all_ui_elements(GtkBuilder *pBuilder) {
+    l_datarate = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_datarate"));
     l_lostpackets = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_lostpackets"));
+    l_recvpackets = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_recvpackets"));
     l_badblocks = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_badblocks"));
     l_video_bestrssi = GTK_LABEL(gtk_builder_get_object(pBuilder, "l_video_bestrssi"));
 
@@ -176,30 +183,29 @@ void get_all_ui_elements(GtkBuilder *pBuilder) {
  * @param argv
  * @return
  */
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     db_gnd_status = db_gnd_status_memory_open();
     db_uav_status = db_uav_status_memory_open();
     db_rc_status = db_rc_status_memory_open();
     db_rc_values = db_rc_values_memory_open();
 
-    printf(GRN "DB_DESKTOP_MONITOR: started!" RESET "\n");
-    GError          *err = NULL;
-    GtkBuilder      *builder;
-    GtkWidget       *window;
+    printf("DB_DESKTOP_MONITOR: started!\n");
+    GError *err = NULL;
+    GtkBuilder *builder;
+    GtkWidget *window;
 
     gtk_init(&argc, &argv);
 
     builder = gtk_builder_new();
-    gtk_builder_add_from_file (builder, "glade/monitor_ui.glade", &err);
+    gtk_builder_add_from_file(builder, "glade/monitor_ui.glade", &err);
     if (err != NULL) {
-        fprintf (stderr, "Unable to read file: %s\n", err->message);
+        fprintf(stderr, "Unable to read file: %s\n", err->message);
         g_error_free(err);
         return 1;
     }
 
     window = GTK_WIDGET(gtk_builder_get_object(builder, "main_window"));
-    g_signal_connect(window, "destroy", G_CALLBACK (on_main_window_destroy), NULL);
+    g_signal_connect(window, "destroy", G_CALLBACK(on_main_window_destroy), NULL);
     get_all_ui_elements(builder);
 
     g_object_unref(builder);
